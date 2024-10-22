@@ -60,8 +60,13 @@ application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_m
 
 # Main function to start the bot
 async def main():
-    # Start the bot
+    # Initialize the application
+    await application.initialize()
+
+    # Start the application
     await application.start()
+
+    # Wait until the application is idle
     await application.updater.start_polling()
     await application.updater.idle()
 
