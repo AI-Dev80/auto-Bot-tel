@@ -5,7 +5,6 @@ from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, Callb
 from langchain_openai import ChatOpenAI
 from langchain.prompts import ChatPromptTemplate, SystemMessagePromptTemplate, HumanMessagePromptTemplate
 from dotenv import load_dotenv
-import logging
 
 # Enable logging
 logging.basicConfig(level=logging.INFO)
@@ -15,6 +14,21 @@ load_dotenv()
 
 # Load OpenAI API key
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+
+# Set up the Telegram bot
+TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+updater = Updater(TOKEN)
+
+# Command handler for /start command
+def start(update, context):
+    context.bot.send_message(chat_id=update.effective_chat.id, text="Hello! I am your AI financial advisor.")
+
+# Add the command handler to the dispatcher
+updater.dispatcher.add_handler(CommandHandler("start", start))
+
+# Start the bot
+updater.start_polling()
+updater.idle()
 
 # Set up OpenAI language model
 llm = ChatOpenAI(temperature=0.5, openai_api_key=OPENAI_API_KEY, model_name='gpt-4o-mini')
