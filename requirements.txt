@@ -1,0 +1,6 @@
+discord.py
+langchain-openai
+python-dotenv
+openai
+langchain
+langchain_community
