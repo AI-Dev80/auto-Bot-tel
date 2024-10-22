@@ -1,6 +1,7 @@
 import os
-import discord
 import re
+from telegram import Update
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
 from langchain_openai import ChatOpenAI
 from langchain.prompts import ChatPromptTemplate, SystemMessagePromptTemplate, HumanMessagePromptTemplate
 from dotenv import load_dotenv
@@ -15,15 +16,8 @@ load_dotenv()
 # Load OpenAI API key
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
-# Set up Discord client with intents
-intents = discord.Intents.default()
-intents.messages = True
-intents.message_content = True
-client = discord.Client(intents=intents)
-
 # Set up OpenAI language model
 llm = ChatOpenAI(temperature=0.5, openai_api_key=OPENAI_API_KEY, model_name='gpt-4o-mini')
-
 
 # Function to generate AI response
 def generate_response(message_content):
@@ -44,23 +38,24 @@ def generate_response(message_content):
 
     return llm(final_prompt).content
 
-# Event listener for when the bot is ready
-@client.event
-async def on_ready():
-    print(f'Logged in as {client.user}')
+# Handler for messages
+def handle_message(update: Update, context: CallbackContext):
+    if context.bot.username in update.message.text:
+        response = generate_response(update.message.text)
+        context.bot.send_message(chat_id=update.effective_chat.id, text=response)
 
-# Event listener for new messages
-@client.event
-async def on_message(message):
-    if message.author == client.user:
-        return  # Avoid replying to itself
+# Main function to start the bot
+def main():
+    # Initialize the Telegram bot
+    updater = Updater(token=os.getenv("TELEGRAM_BOT_TOKEN"), use_context=True)
+    dp = updater.dispatcher
 
-    if client.user.mentioned_in(message):
-        # Generate a response using the entire message content
-        response = generate_response(message.content)
-        # Respond mentioning the user
-        response_with_mention = f"{message.author.mention} {response}"
-        await message.channel.send(response_with_mention)
+    # Handlers
+    dp.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_message))
 
-# Run the bot with the Discord token
-client.run(os.getenv("DISCORD_BOT_TOKEN"))
+    # Start polling
+    updater.start_polling()
+    updater.idle()
+
+if __name__ == '__main__':
+    main()

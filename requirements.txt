@@ -4,3 +4,4 @@ python-dotenv
 openai
 langchain
 langchain_community
+python-telegram-bot
