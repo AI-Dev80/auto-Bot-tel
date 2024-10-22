@@ -6,6 +6,7 @@ from telegram.ext import Application, CommandHandler, MessageHandler, filters, C
 from langchain_openai import ChatOpenAI
 from langchain.prompts import ChatPromptTemplate, SystemMessagePromptTemplate, HumanMessagePromptTemplate
 from dotenv import load_dotenv
+import asyncio
 
 # Enable logging
 logging.basicConfig(level=logging.INFO)
@@ -63,20 +64,24 @@ async def main():
     # Initialize the application
     await application.initialize()
 
-    # Start the bot (this will handle both polling and webhook, if configured)
+    # Start polling
     application.run_polling()
 
-    # Wait until the application is idle (listening for messages)
+    # Shutdown the application
     await application.shutdown()
 
 if __name__ == '__main__':
-    # Run the bot without asyncio.run(), as it could interfere with an existing event loop
-    import asyncio
-    loop = asyncio.get_event_loop()
-
     try:
-        loop.run_until_complete(main())
-    except KeyboardInterrupt:
-        pass
-    finally:
-        loop.close()
+        # Check if an event loop is already running
+        loop = asyncio.get_running_loop()
+    except RuntimeError:  # No event loop is running
+        loop = None
+
+    if loop and loop.is_running():
+        # If an event loop is already running, run the main function in that loop
+        print("Detected running event loop. Scheduling the main function.")
+        asyncio.ensure_future(main())
+    else:
+        # If no event loop is running, start a new one
+        print("No running event loop. Starting the main function with a new loop.")
+        asyncio.run(main())
