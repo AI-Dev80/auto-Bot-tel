@@ -1,7 +1,8 @@
 import os
 import re
+import logging
 from telegram import Update
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext
 from langchain_openai import ChatOpenAI
 from langchain.prompts import ChatPromptTemplate, SystemMessagePromptTemplate, HumanMessagePromptTemplate
 from dotenv import load_dotenv
@@ -17,18 +18,14 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 # Set up the Telegram bot
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-updater = Updater(TOKEN)
+application = Application.builder().token(TOKEN).build()
 
 # Command handler for /start command
-def start(update, context):
-    context.bot.send_message(chat_id=update.effective_chat.id, text="Hello! I am your AI financial advisor.")
+async def start(update: Update, context: CallbackContext):
+    await update.message.reply_text("Hello! I am your AI financial advisor.")
 
-# Add the command handler to the dispatcher
-updater.dispatcher.add_handler(CommandHandler("start", start))
-
-# Start the bot
-updater.start_polling()
-updater.idle()
+# Add the command handler to the application
+application.add_handler(CommandHandler("start", start))
 
 # Set up OpenAI language model
 llm = ChatOpenAI(temperature=0.5, openai_api_key=OPENAI_API_KEY, model_name='gpt-4o-mini')
@@ -53,41 +50,21 @@ def generate_response(message_content):
     return llm(final_prompt).content
 
 # Handler for messages
-def handle_message(update: Update, context: CallbackContext):
+async def handle_message(update: Update, context: CallbackContext):
     if context.bot.username in update.message.text:
         response = generate_response(update.message.text)
-        context.bot.send_message(chat_id=update.effective_chat.id, text=response)
-async def on_message(message):
-    if message.author == client.user:
-        return  # Avoid replying to itself
+        await update.message.reply_text(response)
 
-    if message.content.startswith('/start'):
-        welcome_message = (
-            "👋 Welcome to AI Boss Trading! \n"
-            "I'm your crypto advisor inspired by Elon Musk! \n"
-            "💰 Ask me anything about trading and get data-driven insights. \n"
-            "For example, you can ask about specific cryptocurrencies and I'll evaluate them for you! \n"
-            "Let's trade smarter together! 🚀"
-        )
-        await message.channel.send(welcome_message)
-    
-    if client.user.mentioned_in(message):
-        quoted_text = extract_quoted_text(message.content)
-        response = generate_response(quoted_text)
-        response_with_mention = f"{message.author.mention} {response}"
-        await message.channel.send(response_with_mention)
+# Add the message handler to the application
+application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+
 # Main function to start the bot
-def main():
-    # Initialize the Telegram bot
-    updater = Updater(token=os.getenv("TELEGRAM_BOT_TOKEN"), use_context=True)
-    dp = updater.dispatcher
-
-    # Handlers
-    dp.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_message))
-
-    # Start polling
-    updater.start_polling()
-    updater.idle()
+async def main():
+    # Start the bot
+    await application.start()
+    await application.updater.start_polling()
+    await application.updater.idle()
 
 if __name__ == '__main__':
-    main()
+    import asyncio
+    asyncio.run(main())
