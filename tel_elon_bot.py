@@ -63,14 +63,12 @@ async def main():
     # Initialize the application
     await application.initialize()
 
-    # Start the application
-    await application.start()
+    # Start the bot (this will handle both polling and webhook, if configured)
+    application.run_polling()
 
-    # Start polling for updates
-    await application.start_polling()
-
-    # Wait until the application is idle (listening for messages)
+    # Wait until the application is idle
     await application.idle()
+
 
 if __name__ == '__main__':
     import asyncio
