@@ -66,9 +66,11 @@ async def main():
     # Start the application
     await application.start()
 
-    # Wait until the application is idle
-    await application.updater.start_polling()
-    await application.updater.idle()
+    # Start polling for updates
+    await application.start_polling()
+
+    # Wait until the application is idle (listening for messages)
+    await application.idle()
 
 if __name__ == '__main__':
     import asyncio
