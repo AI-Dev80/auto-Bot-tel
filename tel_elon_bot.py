@@ -43,7 +43,25 @@ def handle_message(update: Update, context: CallbackContext):
     if context.bot.username in update.message.text:
         response = generate_response(update.message.text)
         context.bot.send_message(chat_id=update.effective_chat.id, text=response)
+async def on_message(message):
+    if message.author == client.user:
+        return  # Avoid replying to itself
 
+    if message.content.startswith('/start'):
+        welcome_message = (
+            "👋 Welcome to AI Boss Trading! \n"
+            "I'm your crypto advisor inspired by Elon Musk! \n"
+            "💰 Ask me anything about trading and get data-driven insights. \n"
+            "For example, you can ask about specific cryptocurrencies and I'll evaluate them for you! \n"
+            "Let's trade smarter together! 🚀"
+        )
+        await message.channel.send(welcome_message)
+    
+    if client.user.mentioned_in(message):
+        quoted_text = extract_quoted_text(message.content)
+        response = generate_response(quoted_text)
+        response_with_mention = f"{message.author.mention} {response}"
+        await message.channel.send(response_with_mention)
 # Main function to start the bot
 def main():
     # Initialize the Telegram bot
