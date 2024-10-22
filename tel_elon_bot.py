@@ -66,10 +66,17 @@ async def main():
     # Start the bot (this will handle both polling and webhook, if configured)
     application.run_polling()
 
-    # Wait until the application is idle
-    await application.idle()
-
+    # Wait until the application is idle (listening for messages)
+    await application.shutdown()
 
 if __name__ == '__main__':
+    # Run the bot without asyncio.run(), as it could interfere with an existing event loop
     import asyncio
-    asyncio.run(main())
+    loop = asyncio.get_event_loop()
+
+    try:
+        loop.run_until_complete(main())
+    except KeyboardInterrupt:
+        pass
+    finally:
+        loop.close()
