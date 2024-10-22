@@ -1,87 +1,38 @@
 import os
-import re
-import logging
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext
-from langchain_openai import ChatOpenAI
-from langchain.prompts import ChatPromptTemplate, SystemMessagePromptTemplate, HumanMessagePromptTemplate
-from dotenv import load_dotenv
-import asyncio
+import openai
 
-# Enable logging
-logging.basicConfig(level=logging.INFO)
+# Load your API keys from environment variables
+openai.api_key = os.getenv("OPENAI_API_KEY")
+telegram_token = os.getenv("TELEGRAM_BOT_TOKEN")
 
-# Load environment variables
-load_dotenv()
+# Function to get response from ChatGPT
+def chatgpt_response(message: str) -> str:
+    response = openai.ChatCompletion.create(
+        model='gpt-4-mini',  # or 'gpt-3.5-turbo'
+        messages=[{'role': 'user', 'content': message}]
+    )
+    return response.choices[0].message['content']
 
-# Load OpenAI API key
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+# Command handler for /start
+async def start(update: Update, context: CallbackContext) -> None:
+    await update.message.reply_text('Hello! I am your ChatGPT bot. Ask me anything!')
 
-# Set up the Telegram bot
-TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-application = Application.builder().token(TOKEN).build()
-
-# Command handler for /start command
-async def start(update: Update, context: CallbackContext):
-    await update.message.reply_text("Hello! I am your AI financial advisor.")
-
-# Add the command handler to the application
-application.add_handler(CommandHandler("start", start))
-
-# Set up OpenAI language model
-llm = ChatOpenAI(temperature=0.5, openai_api_key=OPENAI_API_KEY, model_name='gpt-4o-mini')
-
-# Function to generate AI response
-def generate_response(message_content):
-    system_template = """
-        You are Elon Musk! You love Pepe Coin and support Trump! 
-        As a confident financial advisor specializing in the cryptocurrency market, respond with authority and insight.
-        Stay updated on the latest market news and trends. 
-        When asked about a specific crypto asset, provide evaluations based on current market conditions and factors affecting it.
-        Use phrases like: "For [crypto asset], I suggest you look at [factors] and I'm XX% confident in this assessment."
-        Encourage users to ask about specific cryptocurrencies and market trends.
-        Ensure your responses are concise, under 200 characters, and maintain an innovative, strategic, and slightly provocative tone.
-    """
-
-    system_message_prompt = SystemMessagePromptTemplate.from_template(system_template)
-    human_message_prompt = HumanMessagePromptTemplate.from_template("{text}")
-    chat_prompt = ChatPromptTemplate.from_messages([system_message_prompt, human_message_prompt])
-    final_prompt = chat_prompt.format_prompt(text=message_content).to_messages()
-
-    return llm(final_prompt).content
-
-# Handler for messages
-async def handle_message(update: Update, context: CallbackContext):
-    if context.bot.username in update.message.text:
-        response = generate_response(update.message.text)
-        await update.message.reply_text(response)
-
-# Add the message handler to the application
-application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+# Message handler to process text messages
+async def handle_message(update: Update, context: CallbackContext) -> None:
+    user_message = update.message.text
+    bot_response = chatgpt_response(user_message)
+    await update.message.reply_text(bot_response)
 
 # Main function to start the bot
 async def main():
-    # Initialize the application
+    application = Application.builder().token(telegram_token).build()
+    application.add_handler(CommandHandler('start', start))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     await application.initialize()
-
-    # Start polling
     application.run_polling()
 
-    # Shutdown the application
-    await application.shutdown()
-
 if __name__ == '__main__':
-    try:
-        # Check if an event loop is already running
-        loop = asyncio.get_running_loop()
-    except RuntimeError:  # No event loop is running
-        loop = None
-
-    if loop and loop.is_running():
-        # If an event loop is already running, run the main function in that loop
-        print("Detected running event loop. Scheduling the main function.")
-        asyncio.ensure_future(main())
-    else:
-        # If no event loop is running, start a new one
-        print("No running event loop. Starting the main function with a new loop.")
-        asyncio.run(main())
+    import asyncio
+    asyncio.run(main())
